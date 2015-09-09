@@ -49,13 +49,13 @@ func showIndex(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	x := struct{
-		User User
-		Links []Link
+	x := struct {
+		User     User
+		Links    []Link
 		LinkKeys []*datastore.Key
 	}{
-		User: us,
-		Links: links,
+		User:     us,
+		Links:    links,
 		LinkKeys: lks,
 	}
 	err = pages.ExecuteTemplate(w, "index.html", x)
@@ -99,7 +99,7 @@ func showLogin(w http.ResponseWriter, c appengine.Context) {
 func showError(w http.ResponseWriter, msg string, status int, c appengine.Context) {
 	err := pages.ExecuteTemplate(w, "oops.html", map[string]string{
 		"Message": msg,
-		"Status": http.StatusText(status),
+		"Status":  http.StatusText(status),
 	})
 	if err != nil {
 		http.Error(w, "Failed to render the page.", http.StatusInternalServerError)
@@ -130,7 +130,7 @@ func addLink(w http.ResponseWriter, r *http.Request) {
 	//TODO: fetch the title
 	lk := datastore.NewIncompleteKey(c, "Link", uk)
 	_, err = datastore.Put(c, lk, &Link{
-		URL: url,
+		URL:   url,
 		Added: time.Now(),
 	})
 	if err != nil {
@@ -143,12 +143,12 @@ func addLink(w http.ResponseWriter, r *http.Request) {
 
 type User struct {
 	Email string
-	Tags []string
+	Tags  []string
 }
 
 type Link struct {
-	URL string
+	URL   string
 	Title string
-	Tags []string
+	Tags  []string
 	Added time.Time
 }
