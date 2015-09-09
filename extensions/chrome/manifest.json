@@ -1,0 +1,21 @@
+{
+  "manifest_version": 2,
+
+  "name": "Hold My Page",
+  "description": "This extension will bookmark the current page and save it to holdmypage.appspot.com",
+  "version": "1.0",
+
+  "browser_action": {
+   "default_icon": "icon.png",
+   "default_title": "Hold this page!"
+  },
+
+  "background": {
+    "scripts": ["holdmypage.js"],
+    "persistent": false
+  },
+
+  "permissions": [
+   "activeTab"
+   ]
+}
