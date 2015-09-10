@@ -1,0 +1,18 @@
+<html>
+<head>
+<title>Links for You!</title>
+</head>
+<body>
+<form action="/add" method="post">
+	<input name="url"/>
+	<input type="submit" value="Save it for later"/>
+</form>
+<p>
+	<ul>
+		{{range .Links}}
+		<li><a href="{{.URL}}">{{.URL}}</a></li>
+		{{end}}
+	</ul>
+</p>
+</body>
+</html>
