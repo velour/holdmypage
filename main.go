@@ -121,8 +121,13 @@ func addLink(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if !strings.HasPrefix(url, "http://") && !strings.HasPrefix(url, "https://") {
+		showError(w, "Please specify http:// or https://", http.StatusBadRequest, c)
+		return
+	}
+
 	l := Link{
-		URL:   r.FormValue("url"),
+		URL:   url,
 		Added: time.Now(),
 	}
 
