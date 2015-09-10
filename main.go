@@ -99,12 +99,10 @@ func addLink(w http.ResponseWriter, r *http.Request) {
 		http.NotFound(w, r)
 		return
 	}
+
 	c := appengine.NewContext(r)
 	u := user.Current(c)
-	if u == nil {
-		showError(w, "not logged in", http.StatusUnauthorized, c)
-		return
-	}
+
 	_, uk, err := getUser(c)
 	if err != nil {
 		showError(w, "failed to retrieve user", http.StatusInternalServerError, c)
