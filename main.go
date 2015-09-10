@@ -122,7 +122,7 @@ func addLink(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if !strings.HasPrefix(url, "http://") && !strings.HasPrefix(url, "https://") {
-		showError(w, "Please specify http:// or https://", http.StatusBadRequest, c)
+		showError(w, "Please specify http:// or https:// in your URL.", http.StatusBadRequest, c)
 		return
 	}
 
