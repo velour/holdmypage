@@ -66,20 +66,6 @@ func showIndex(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func getUser(c appengine.Context) (User, *datastore.Key, error) {
-	u := user.Current(c)
-
-	//TODO: we're using google accounts for now,
-	// but this may need to change to something more complex if we change.
-	uk := datastore.NewKey(c, "User", u.ID, 0, nil)
-	var us User
-	err := datastore.Get(c, uk, &us)
-	if err != nil && err != datastore.ErrNoSuchEntity {
-		return us, uk, err
-	}
-	return us, uk, nil
-}
-
 func showLogin(w http.ResponseWriter, c appengine.Context) {
 	login, err := user.LoginURL(c, "/")
 	if err != nil {
@@ -125,30 +111,15 @@ func addLink(w http.ResponseWriter, r *http.Request) {
 		c.Errorf("failed to retrieve user %q: %v", u.String(), err)
 	}
 
-	url := r.FormValue("url")
-	//TODO: trim spaces
-	//TODO: fetch the title
-	lk := datastore.NewIncompleteKey(c, "Link", uk)
-	_, err = datastore.Put(c, lk, &Link{
-		URL:   url,
+	l := Link{
+		URL:   r.FormValue("url"),
 		Added: time.Now(),
-	})
+	}
+	_, err = l.Save(c, uk)
 	if err != nil {
 		showError(w, "failed to store link", http.StatusInternalServerError, c)
 		c.Errorf("failed to store link: %v", err)
 	}
 
 	http.Redirect(w, r, "/", http.StatusFound)
-}
-
-type User struct {
-	Email string
-	Tags  []string
-}
-
-type Link struct {
-	URL   string
-	Title string
-	Tags  []string
-	Added time.Time
 }
