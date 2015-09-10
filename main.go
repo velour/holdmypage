@@ -1,12 +1,17 @@
 package main
 
 import (
+	"io"
 	"net/http"
+	"strings"
 	"text/template"
 	"time"
 
+	"golang.org/x/net/html"
+
 	"appengine"
 	"appengine/datastore"
+	"appengine/urlfetch"
 	"appengine/user"
 )
 
@@ -107,17 +112,63 @@ func addLink(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		showError(w, "failed to retrieve user", http.StatusInternalServerError, c)
 		c.Errorf("failed to retrieve user %q: %v", u.String(), err)
+		return
+	}
+
+	url := strings.TrimSpace(r.FormValue("url"))
+	if url == "" {
+		showError(w, "Empty URLs are not allowed.", http.StatusBadRequest, c)
+		return
 	}
 
 	l := Link{
 		URL:   r.FormValue("url"),
 		Added: time.Now(),
 	}
+
+	resp, err := urlfetch.Client(c).Get(url)
+	if err != nil {
+		l.Title = err.Error()
+	} else {
+		defer resp.Body.Close()
+		l.Title = parseTitle(resp.Body)
+	}
+
 	_, err = l.Save(c, uk)
 	if err != nil {
 		showError(w, "failed to store link", http.StatusInternalServerError, c)
 		c.Errorf("failed to store link: %v", err)
+		return
 	}
 
 	http.Redirect(w, r, "/", http.StatusFound)
+}
+
+func parseTitle(resp io.Reader) string {
+	r := io.LimitedReader{
+		R: resp,
+		N: 8192,
+	}
+
+	h := html.NewTokenizer(&r)
+	for {
+		tt := h.Next()
+		switch tt {
+		case html.ErrorToken:
+			return "Failed to parse page"
+		case html.StartTagToken:
+			tag, _ := h.TagName()
+			if string(tag) == "title" {
+				nt := h.Next()
+				switch nt {
+				case html.ErrorToken:
+					return "Failed to parse title"
+				case html.TextToken:
+					return h.Token().Data
+				}
+			}
+		}
+	}
+
+	return "Failed to find title"
 }
