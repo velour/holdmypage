@@ -1,6 +1,8 @@
 package main
 
 import (
+	"bytes"
+	"fmt"
 	"io"
 	"net/http"
 	"strings"
@@ -24,8 +26,10 @@ func init() {
 
 	r := mux.NewRouter()
 	r.HandleFunc("/", showIndex).Methods("GET")
+	r.HandleFunc("/getlinks", getLinks).Methods("GET")
 	r.HandleFunc("/add", addLink).Methods("POST")
-	http.HandleFunc("/edit", editLinkTitle)
+	r.HandleFunc("/batchadd", batchAddLinks).Methods("POST")
+	r.HandleFunc("/edit", editLinkTitle).Methods("POST")
 	//TODO: should be delete, but I don't feel like writing JS to access a fundamental HTTP verb right now
 	r.HandleFunc("/link/{key}", delLink).Methods("POST")
 	http.Handle("/", r)
@@ -66,16 +70,10 @@ func showIndex(w http.ResponseWriter, r *http.Request) {
 		User     User
 		Links    []Link
 		LinkKeys []*datastore.Key
-		EncodedLinkKeys []string
 	}{
 		User:     us,
 		Links:    links,
 		LinkKeys: lks,
-		EncodedLinkKeys: make([]string, len(lks)),
-	}
-
-	for index, linkKey := range x.LinkKeys {
-		x.EncodedLinkKeys[index] = linkKey.Encode()
 	}
 
 	err = pages.ExecuteTemplate(w, "index.html", x)
@@ -112,6 +110,41 @@ func showError(w http.ResponseWriter, msg string, status int, c appengine.Contex
 		c.Errorf("failed to render error: %v", err)
 		return
 	}
+}
+
+func getLinks(w http.ResponseWriter, r *http.Request) {
+	c := appengine.NewContext(r)
+
+	u := user.Current(c)
+	if u == nil {
+		fmt.Fprint(w, "")
+		return
+	}
+
+	_, uk, err := getUser(c)
+	if err != nil {
+		showError(w, "Ask Steve to look.", http.StatusInternalServerError, c)
+		c.Errorf("failed to retrieve user %q: %v", u.String(), err)
+	}
+
+	links := []Link{}
+	_, err = datastore.NewQuery("Link").
+		Ancestor(uk).
+		Order("-Added").
+		GetAll(c, &links)
+	if err != nil {
+		showError(w, "Ask Scott to look.", http.StatusInternalServerError, c)
+		c.Errorf("failed to retrieve user's links %q: %v", u.String(), err)
+		return
+	}
+
+	var buffer bytes.Buffer
+	for _, link := range links {
+		buffer.WriteString(link.URL)
+		buffer.WriteString(";")
+	}
+
+	fmt.Fprintf(w, buffer.String())
 }
 
 func addLink(w http.ResponseWriter, r *http.Request) {
@@ -154,6 +187,55 @@ func addLink(w http.ResponseWriter, r *http.Request) {
 		showError(w, "failed to store link", http.StatusInternalServerError, c)
 		c.Errorf("failed to store link: %v", err)
 		return
+	}
+
+	http.Redirect(w, r, "/", http.StatusFound)
+}
+
+func batchAddLinks(w http.ResponseWriter, r *http.Request) {
+	c := appengine.NewContext(r)
+	u := user.Current(c)
+
+	_, uk, err := getUser(c)
+	if err != nil {
+		showError(w, "failed to retrieve user", http.StatusInternalServerError, c)
+		c.Errorf("failed to retrieve user %q: %v", u.String(), err)
+		return
+	}
+
+	urls := strings.TrimSpace(r.FormValue("urls"))
+	if urls == "" {
+		showError(w, "Empty URL lists are not allowed.", http.StatusBadRequest, c)
+		return
+	}
+
+	urlList := strings.Split(urls, ";")
+
+	for _, url := range urlList {
+		if !strings.HasPrefix(url, "http://") && !strings.HasPrefix(url, "https://") {
+			// showError(w, "Please specify http:// or https:// in your URL.", http.StatusBadRequest, c)
+			continue
+		}
+
+		l := Link{
+			URL:   url,
+			Added: time.Now(),
+		}
+
+		resp, err := urlfetch.Client(c).Get(url)
+		if err != nil {
+			l.Title = err.Error()
+		} else {
+			defer resp.Body.Close()
+			l.Title = parseTitle(resp.Body)
+		}
+
+		_, err = l.Save(c, uk)
+		if err != nil {
+			// showError(w, "failed to store link", http.StatusInternalServerError, c)
+			// c.Errorf("failed to store link: %v", err)
+			continue
+		}
 	}
 
 	http.Redirect(w, r, "/", http.StatusFound)
