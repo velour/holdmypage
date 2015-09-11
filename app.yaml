@@ -13,5 +13,8 @@ handlers:
 - url: /add
   login: required
   script: _go_app
+- url: /edit
+  login: required
+  script: _go_app
 - url: /.*
   script: _go_app

@@ -19,29 +19,87 @@
 </head>
 <body>
 <div class="container">
+	<div class="row">
+
+	<div class="col-md-8">
 	<h1>🐦 Magpie</h2>
 	<form action="/add" method="post" class="form-inline">
 		<input name="url" class="form-control"/>
 		<input type="submit" value="Save it for later" class="btn btn-primary"/>
 	</form>
 	<p>
-		<ul class="list-group">
-			{{range $i, $e := .Links}}
-			<li class="list-group-item" href="{{$e.URL}}">
-				<form action="/link/{{(index $.LinkKeys $i).Encode}}" method="post">
+		<div class="list-group">
+			{{range $index, $link := .Links}}
+			<a class="list-group-item link-container" href="{{$link.URL}}">
+				<form action="/link/{{(index $.LinkKeys $index).Encode}}" method="post" class="hide-on-edit">
 					<button type="submit" class="btn btn-link pull-right">
 						<span class="glyphicon glyphicon-ok"></span>
 					</button>
 				</form>
-				<h4>{{$e.Title}}</h4>
-				<p>{{$e.Added}}</p>
-			</li>
+				<button class="btn btn-link pull-right edit-btn hide-on-edit">
+					<span class="glyphicon glyphicon glyphicon-pencil"></span>
+				</button>
+				<h4 class="link-title hide-on-edit">{{$link.Title}}</h4>
+				<div class="input-group edit-ctrls show-on-edit" style="display:none;">
+					<span class="input-group-btn">
+						<button class="btn btn-default update-btn" type="button">Update</button>
+						<button class="btn btn-default cancel-btn" type="button">Cancel</button>
+					</span>
+					<input type="text" class="form-control link-title-input" value="{{$link.Title}}">
+					<input type="hidden" value="{{(index $.LinkKeys $index).Encode}}"/>
+				</div>
+				<p>{{$link.Added}}</p>
+			</a>
 			{{end}}
 		</ul>
 	</p>
-</div>
+	</div>
 
+	{{/* this space reserved for the tags column */}}
+
+	</div>
+</div>
 <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.min.js"></script>
 <script src="js/bootstrap.min.js"></script>
+<script>
+
+function showEdit(editBtn) {
+	$parentItem = $(editBtn).parents('.link-container');
+	$parentItem.children('.hide-on-edit').hide();
+	$parentItem.children('.show-on-edit').show();
+}
+
+function hideEdit(btn) {
+	$parentItem = $(btn).parents('.link-container');
+	$parentItem.children('.show-on-edit').hide();
+	$parentItem.children('.hide-on-edit').show();
+}
+
+$('.edit-btn').click(function(event){
+	event.preventDefault();
+	showEdit(this);
+});
+
+$('.edit-ctrls .cancel-btn').click(function(event){
+	event.preventDefault();
+	hideEdit(this);
+	var oldTitle = $(this).parents('.link-container').children('.link-title').html();
+	$('.edit-ctrls').children('.link-title-input').val(oldTitle);
+});
+
+$('.edit-ctrls .update-btn').click(function(event){
+	event.preventDefault();
+	hideEdit(this);
+	var newTitle = $('.edit-ctrls').children('.link-title-input').val();
+	$(this).parents('.link-container').children('.link-title').html(newTitle);
+	var key = $(this).parents('.input-group-btn').next().next().val();
+	$.post('/edit', { Key : key, Title : newTitle });
+});
+
+$('.edit-ctrls input').click(function(event){
+	event.preventDefault();
+});
+
+</script>
 </body>
 </html>

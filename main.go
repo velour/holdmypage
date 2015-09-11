@@ -21,9 +21,11 @@ var pages *template.Template
 
 func init() {
 	pages = template.Must(template.ParseGlob("pages/*.html"))
+
 	r := mux.NewRouter()
 	r.HandleFunc("/", showIndex).Methods("GET")
 	r.HandleFunc("/add", addLink).Methods("POST")
+	http.HandleFunc("/edit", editLinkTitle)
 	//TODO: should be delete, but I don't feel like writing JS to access a fundamental HTTP verb right now
 	r.HandleFunc("/link/{key}", delLink).Methods("POST")
 	http.Handle("/", r)
@@ -64,11 +66,18 @@ func showIndex(w http.ResponseWriter, r *http.Request) {
 		User     User
 		Links    []Link
 		LinkKeys []*datastore.Key
+		EncodedLinkKeys []string
 	}{
 		User:     us,
 		Links:    links,
 		LinkKeys: lks,
+		EncodedLinkKeys: make([]string, len(lks)),
 	}
+
+	for index, linkKey := range x.LinkKeys {
+		x.EncodedLinkKeys[index] = linkKey.Encode()
+	}
+
 	err = pages.ExecuteTemplate(w, "index.html", x)
 	if err != nil {
 		http.Error(w, "Failed to render the page.", http.StatusInternalServerError)
@@ -177,6 +186,43 @@ func parseTitle(resp io.Reader) string {
 	}
 
 	return "Failed to find title"
+}
+
+func editLinkTitle(w http.ResponseWriter, r *http.Request) {
+	if r.Method != "POST" {
+		http.NotFound(w, r)
+		return
+	}
+
+	c := appengine.NewContext(r)
+	u := user.Current(c)
+
+	_, _, err := getUser(c)
+	if err != nil {
+		showError(w, "failed to retrieve user", http.StatusInternalServerError, c)
+		c.Errorf("failed to retrieve user %q: %v", u.String(), err)
+		return
+	}
+
+	var k *datastore.Key
+
+	if k, err = datastore.DecodeKey(r.FormValue("Key")); err != nil {
+        http.Error(w, err.Error(), 501)
+        return
+	}
+
+	l := new(Link)
+	if err := datastore.Get(c, k, l); err != nil {
+        http.Error(w, err.Error(), 500)
+        return
+    }
+
+    l.Title = r.FormValue("Title")
+
+	if _, err := datastore.Put(c, k, l); err != nil {
+        http.Error(w, err.Error(), 500)
+        return
+    }
 }
 
 func delLink(w http.ResponseWriter, r *http.Request) {
