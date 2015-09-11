@@ -13,18 +13,23 @@ import (
 	"appengine/datastore"
 	"appengine/urlfetch"
 	"appengine/user"
+
+	"github.com/gorilla/mux"
 )
 
 var pages *template.Template
 
 func init() {
 	pages = template.Must(template.ParseGlob("pages/*.html"))
-	http.HandleFunc("/", showIndex)
-	http.HandleFunc("/add", addLink)
+	r := mux.NewRouter()
+	r.HandleFunc("/", showIndex).Methods("GET")
+	r.HandleFunc("/add", addLink).Methods("POST")
+	//TODO: should be delete, but I don't feel like writing JS to access a fundamental HTTP verb right now
+	r.HandleFunc("/link/{key}", delLink).Methods("POST")
 }
 
 func showIndex(w http.ResponseWriter, r *http.Request) {
-	if r.URL.Path != "/" || r.Method != "GET" {
+	if r.URL.Path != "/" {
 		http.NotFound(w, r)
 		return
 	}
@@ -100,11 +105,6 @@ func showError(w http.ResponseWriter, msg string, status int, c appengine.Contex
 }
 
 func addLink(w http.ResponseWriter, r *http.Request) {
-	if r.Method != "POST" {
-		http.NotFound(w, r)
-		return
-	}
-
 	c := appengine.NewContext(r)
 	u := user.Current(c)
 
@@ -176,4 +176,7 @@ func parseTitle(resp io.Reader) string {
 	}
 
 	return "Failed to find title"
+}
+
+func delLink(w http.ResponseWriter, r *http.Request) {
 }
