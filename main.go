@@ -180,4 +180,25 @@ func parseTitle(resp io.Reader) string {
 }
 
 func delLink(w http.ResponseWriter, r *http.Request) {
+	c := appengine.NewContext(r)
+	key := mux.Vars(r)["key"]
+	if key == "" {
+		http.NotFound(w, r)
+		return
+	}
+
+	k, err := datastore.DecodeKey(key)
+	if err != nil {
+		showError(w, "Invalid link key.", http.StatusBadRequest, c)
+		return
+	}
+
+	err = datastore.Delete(c, k)
+	if err != nil {
+		showError(w, "Failed to delete link.", http.StatusInternalServerError, c)
+		c.Errorf("Failed to delete %v: %v", k, err)
+		return
+	}
+
+	http.Redirect(w, r, "/", http.StatusFound)
 }
