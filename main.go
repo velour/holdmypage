@@ -26,6 +26,7 @@ func init() {
 	r.HandleFunc("/add", addLink).Methods("POST")
 	//TODO: should be delete, but I don't feel like writing JS to access a fundamental HTTP verb right now
 	r.HandleFunc("/link/{key}", delLink).Methods("POST")
+	http.Handle("/", r)
 }
 
 func showIndex(w http.ResponseWriter, r *http.Request) {
