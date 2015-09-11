@@ -11,11 +11,13 @@
   },
 
   "background": {
-    "scripts": ["holdmypage.js"],
+    "scripts": ["jquery-2.1.4.min.js","holdmypage.js"],
     "persistent": false
   },
 
   "permissions": [
-   "activeTab"
+   "activeTab",
+   "http://localhost:8080/",
+   "http://holdmypage.appspot.com/"
    ]
 }
