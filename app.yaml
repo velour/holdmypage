@@ -13,7 +13,13 @@ handlers:
 - url: /add
   login: required
   script: _go_app
+- url: /batchadd
+  login: required
+  script: _go_app
 - url: /edit
+  login: required
+  script: _go_app
+- url: /getlinks
   login: required
   script: _go_app
 - url: /.*
