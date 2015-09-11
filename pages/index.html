@@ -19,6 +19,9 @@
 </head>
 <body>
 <div class="container">
+	<div class="row">
+
+	<div class="col-md-8">
 	<h1>🐦 Magpie</h2>
 	<form action="/add" method="post" class="form-inline">
 		<input name="url" class="form-control"/>
@@ -26,9 +29,13 @@
 	</form>
 	<p>
 		<div class="list-group">
-			{{$keys := .EncodedLinkKeys}}
 			{{range $index, $link := .Links}}
 			<a class="list-group-item" href="{{$link.URL}}">
+				<form action="/link/{{(index $.LinkKeys $index).Encode}}" method="post">
+					<button type="submit" class="btn btn-link pull-right">
+						<span class="glyphicon glyphicon-ok"></span>
+					</button>
+				</form>
 				<h4>{{$link.Title}}</h4>
 				<div class="input-group" style="display:none;">
 					<span class="input-group-btn">
@@ -36,13 +43,18 @@
 						<button class="btn btn-default" type="button">Cancel</button>
 					</span>
 					<input type="text" class="form-control" value="{{$link.Title}}">
-					<input type="hidden" value="{{index $keys $index}}"/>
+					<input type="hidden" value="{{(index $.LinkKeys $index).Encode}}"/>
 				</div>
 				<p>{{$link.Added}}</p>
 			</a>
 			{{end}}
-		</div>
+		</ul>
 	</p>
+	</div>
+
+	{{/* this space reserved for the tags column */}}
+
+	</div>
 </div>
 <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.min.js"></script>
 <script src="js/bootstrap.min.js"></script>

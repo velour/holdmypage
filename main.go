@@ -13,19 +13,26 @@ import (
 	"appengine/datastore"
 	"appengine/urlfetch"
 	"appengine/user"
+
+	"github.com/gorilla/mux"
 )
 
 var pages *template.Template
 
 func init() {
 	pages = template.Must(template.ParseGlob("pages/*.html"))
-	http.HandleFunc("/", showIndex)
-	http.HandleFunc("/add", addLink)
+
+	r := mux.NewRouter()
+	r.HandleFunc("/", showIndex).Methods("GET")
+	r.HandleFunc("/add", addLink).Methods("POST")
 	http.HandleFunc("/edit", editLinkTitle)
+	//TODO: should be delete, but I don't feel like writing JS to access a fundamental HTTP verb right now
+	r.HandleFunc("/link/{key}", delLink).Methods("POST")
+	http.Handle("/", r)
 }
 
 func showIndex(w http.ResponseWriter, r *http.Request) {
-	if r.URL.Path != "/" || r.Method != "GET" {
+	if r.URL.Path != "/" {
 		http.NotFound(w, r)
 		return
 	}
@@ -108,11 +115,6 @@ func showError(w http.ResponseWriter, msg string, status int, c appengine.Contex
 }
 
 func addLink(w http.ResponseWriter, r *http.Request) {
-	if r.Method != "POST" {
-		http.NotFound(w, r)
-		return
-	}
-
 	c := appengine.NewContext(r)
 	u := user.Current(c)
 
@@ -221,4 +223,28 @@ func editLinkTitle(w http.ResponseWriter, r *http.Request) {
         http.Error(w, err.Error(), 500)
         return
     }
+}
+
+func delLink(w http.ResponseWriter, r *http.Request) {
+	c := appengine.NewContext(r)
+	key := mux.Vars(r)["key"]
+	if key == "" {
+		http.NotFound(w, r)
+		return
+	}
+
+	k, err := datastore.DecodeKey(key)
+	if err != nil {
+		showError(w, "Invalid link key.", http.StatusBadRequest, c)
+		return
+	}
+
+	err = datastore.Delete(c, k)
+	if err != nil {
+		showError(w, "Failed to delete link.", http.StatusInternalServerError, c)
+		c.Errorf("Failed to delete %v: %v", k, err)
+		return
+	}
+
+	http.Redirect(w, r, "/", http.StatusFound)
 }
