@@ -26,17 +26,52 @@
 	</form>
 	<p>
 		<div class="list-group">
-			{{range .Links}}
-			<a class="list-group-item" href="{{.URL}}">
-				<h4>{{.Title}}</h4>
-				<p>{{.Added}}</p>
+			{{$keys := .EncodedLinkKeys}}
+			{{range $index, $link := .Links}}
+			<a class="list-group-item" href="{{$link.URL}}">
+				<h4>{{$link.Title}}</h4>
+				<div class="input-group" style="display:none;">
+					<span class="input-group-btn">
+						<button class="btn btn-default" type="button">Update</button>
+						<button class="btn btn-default" type="button">Cancel</button>
+					</span>
+					<input type="text" class="form-control" value="{{$link.Title}}">
+					<input type="hidden" value="{{index $keys $index}}"/>
+				</div>
+				<p>{{$link.Added}}</p>
 			</a>
 			{{end}}
 		</div>
 	</p>
 </div>
-
 <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.min.js"></script>
 <script src="js/bootstrap.min.js"></script>
+<script>
+$('h4').click(function(event){
+	event.preventDefault();
+	$(this).hide();
+	$(this).next().show();
+});
+
+$('.input-group-btn button').click(function(event){
+	event.preventDefault();
+	var newText = $(this).parents('.input-group-btn').next().val();
+	$(this).parents('.input-group').hide();
+	if($(this).html() === "Cancel") {
+		$(this).parents('.input-group-btn').next().val($(this).parents('.input-group').prev().html());
+		$(this).parents('.input-group').prev().show();
+
+	} else {
+		$(this).parents('.input-group').prev().html(newText).show();
+		var key = $(this).parents('.input-group-btn').next().next().val();
+		$.post('/edit', { Key : key, Title : newText });
+	}	
+});
+
+$('.input-group input').click(function(event){
+	event.preventDefault();
+});
+
+</script>
 </body>
 </html>
