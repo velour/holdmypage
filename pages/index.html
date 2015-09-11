@@ -30,19 +30,22 @@
 	<p>
 		<div class="list-group">
 			{{range $index, $link := .Links}}
-			<a class="list-group-item" href="{{$link.URL}}">
-				<form action="/link/{{(index $.LinkKeys $index).Encode}}" method="post">
+			<a class="list-group-item link-container" href="{{$link.URL}}">
+				<form action="/link/{{(index $.LinkKeys $index).Encode}}" method="post" class="hide-on-edit">
 					<button type="submit" class="btn btn-link pull-right">
 						<span class="glyphicon glyphicon-ok"></span>
 					</button>
 				</form>
-				<h4>{{$link.Title}}</h4>
-				<div class="input-group" style="display:none;">
+				<button class="btn btn-link pull-right edit-btn hide-on-edit">
+					<span class="glyphicon glyphicon glyphicon-pencil"></span>
+				</button>
+				<h4 class="link-title hide-on-edit">{{$link.Title}}</h4>
+				<div class="input-group edit-ctrls show-on-edit" style="display:none;">
 					<span class="input-group-btn">
-						<button class="btn btn-default" type="button">Update</button>
-						<button class="btn btn-default" type="button">Cancel</button>
+						<button class="btn btn-default update-btn" type="button">Update</button>
+						<button class="btn btn-default cancel-btn" type="button">Cancel</button>
 					</span>
-					<input type="text" class="form-control" value="{{$link.Title}}">
+					<input type="text" class="form-control link-title-input" value="{{$link.Title}}">
 					<input type="hidden" value="{{(index $.LinkKeys $index).Encode}}"/>
 				</div>
 				<p>{{$link.Added}}</p>
@@ -59,28 +62,41 @@
 <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.min.js"></script>
 <script src="js/bootstrap.min.js"></script>
 <script>
-$('h4').click(function(event){
+
+function showEdit(editBtn) {
+	$parentItem = $(editBtn).parents('.link-container');
+	$parentItem.children('.hide-on-edit').hide();
+	$parentItem.children('.show-on-edit').show();
+}
+
+function hideEdit(btn) {
+	$parentItem = $(btn).parents('.link-container');
+	$parentItem.children('.show-on-edit').hide();
+	$parentItem.children('.hide-on-edit').show();
+}
+
+$('.edit-btn').click(function(event){
 	event.preventDefault();
-	$(this).hide();
-	$(this).next().show();
+	showEdit(this);
 });
 
-$('.input-group-btn button').click(function(event){
+$('.edit-ctrls .cancel-btn').click(function(event){
 	event.preventDefault();
-	var newText = $(this).parents('.input-group-btn').next().val();
-	$(this).parents('.input-group').hide();
-	if($(this).html() === "Cancel") {
-		$(this).parents('.input-group-btn').next().val($(this).parents('.input-group').prev().html());
-		$(this).parents('.input-group').prev().show();
-
-	} else {
-		$(this).parents('.input-group').prev().html(newText).show();
-		var key = $(this).parents('.input-group-btn').next().next().val();
-		$.post('/edit', { Key : key, Title : newText });
-	}	
+	hideEdit(this);
+	var oldTitle = $(this).parents('.link-container').children('.link-title').html();
+	$('.edit-ctrls').children('.link-title-input').val(oldTitle);
 });
 
-$('.input-group input').click(function(event){
+$('.edit-ctrls .update-btn').click(function(event){
+	event.preventDefault();
+	hideEdit(this);
+	var newTitle = $('.edit-ctrls').children('.link-title-input').val();
+	$(this).parents('.link-container').children('.link-title').html(newTitle);
+	var key = $(this).parents('.input-group-btn').next().next().val();
+	$.post('/edit', { Key : key, Title : newTitle });
+});
+
+$('.edit-ctrls input').click(function(event){
 	event.preventDefault();
 });
 
