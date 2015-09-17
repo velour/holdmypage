@@ -179,7 +179,7 @@ func addLink(w http.ResponseWriter, r *http.Request) {
 		l.Title = err.Error()
 	} else {
 		defer resp.Body.Close()
-		l.Title = parseTitle(resp.Body)
+		l.Title = parseTitle(resp.Body, url)
 	}
 
 	_, err = l.Save(c, uk)
@@ -227,7 +227,7 @@ func batchAddLinks(w http.ResponseWriter, r *http.Request) {
 			l.Title = err.Error()
 		} else {
 			defer resp.Body.Close()
-			l.Title = parseTitle(resp.Body)
+			l.Title = parseTitle(resp.Body, url)
 		}
 
 		_, err = l.Save(c, uk)
@@ -241,7 +241,7 @@ func batchAddLinks(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/", http.StatusFound)
 }
 
-func parseTitle(resp io.Reader) string {
+func parseTitle(resp io.Reader, fallback string) string {
 	r := io.LimitedReader{
 		R: resp,
 		N: 8192,
@@ -252,7 +252,7 @@ func parseTitle(resp io.Reader) string {
 		tt := h.Next()
 		switch tt {
 		case html.ErrorToken:
-			return "Failed to parse page"
+			return fallback
 		case html.StartTagToken:
 			tag, _ := h.TagName()
 			if string(tag) == "title" {
@@ -267,7 +267,7 @@ func parseTitle(resp io.Reader) string {
 		}
 	}
 
-	return "Failed to find title"
+	return fallback
 }
 
 func editLinkTitle(w http.ResponseWriter, r *http.Request) {
