@@ -289,22 +289,22 @@ func editLinkTitle(w http.ResponseWriter, r *http.Request) {
 	var k *datastore.Key
 
 	if k, err = datastore.DecodeKey(r.FormValue("Key")); err != nil {
-        http.Error(w, err.Error(), 501)
-        return
+		http.Error(w, err.Error(), 501)
+		return
 	}
 
 	l := new(Link)
 	if err := datastore.Get(c, k, l); err != nil {
-        http.Error(w, err.Error(), 500)
-        return
-    }
+		http.Error(w, err.Error(), 500)
+		return
+	}
 
-    l.Title = r.FormValue("Title")
+	l.Title = r.FormValue("Title")
 
 	if _, err := datastore.Put(c, k, l); err != nil {
-        http.Error(w, err.Error(), 500)
-        return
-    }
+		http.Error(w, err.Error(), 500)
+		return
+	}
 }
 
 func delLink(w http.ResponseWriter, r *http.Request) {
