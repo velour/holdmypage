@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"math/rand"
 	"strings"
 	"text/template"
 	"time"
@@ -19,7 +20,10 @@ import (
 	"github.com/gorilla/mux"
 )
 
-var pages *template.Template
+var (
+	pages *template.Template
+	devs = []string{"Steve", "Scott"}
+)
 
 func init() {
 	pages = template.Must(template.ParseGlob("pages/*.html"))
@@ -33,6 +37,10 @@ func init() {
 	//TODO: should be delete, but I don't feel like writing JS to access a fundamental HTTP verb right now
 	r.HandleFunc("/link/{key}", delLink).Methods("POST")
 	http.Handle("/", r)
+}
+
+func askWho() string {
+	return fmt.Sprintf("Ask %s to look.", devs[rand.Intn(len(devs))])
 }
 
 func showIndex(w http.ResponseWriter, r *http.Request) {
@@ -51,7 +59,7 @@ func showIndex(w http.ResponseWriter, r *http.Request) {
 
 	us, uk, err := getUser(c)
 	if err != nil {
-		showError(w, "Ask Steve to look.", http.StatusInternalServerError, c)
+		showError(w, askWho(), http.StatusInternalServerError, c)
 		c.Errorf("failed to retrieve user %q: %v", u.String(), err)
 	}
 
@@ -61,7 +69,7 @@ func showIndex(w http.ResponseWriter, r *http.Request) {
 		Order("-Added").
 		GetAll(c, &links)
 	if err != nil {
-		showError(w, "Ask Scott to look.", http.StatusInternalServerError, c)
+		showError(w, askWho(), http.StatusInternalServerError, c)
 		c.Errorf("failed to retrieve user's links %q: %v", u.String(), err)
 		return
 	}
@@ -87,7 +95,7 @@ func showIndex(w http.ResponseWriter, r *http.Request) {
 func showLogin(w http.ResponseWriter, c appengine.Context) {
 	login, err := user.LoginURL(c, "/")
 	if err != nil {
-		showError(w, "Ask Steve.", http.StatusInternalServerError, c)
+		showError(w, askWho(), http.StatusInternalServerError, c)
 		c.Errorf("Failed to get login url: %v", err)
 		return
 	}
@@ -123,7 +131,7 @@ func getLinks(w http.ResponseWriter, r *http.Request) {
 
 	_, uk, err := getUser(c)
 	if err != nil {
-		showError(w, "Ask Steve to look.", http.StatusInternalServerError, c)
+		showError(w, askWho(), http.StatusInternalServerError, c)
 		c.Errorf("failed to retrieve user %q: %v", u.String(), err)
 	}
 
@@ -133,7 +141,7 @@ func getLinks(w http.ResponseWriter, r *http.Request) {
 		Order("-Added").
 		GetAll(c, &links)
 	if err != nil {
-		showError(w, "Ask Scott to look.", http.StatusInternalServerError, c)
+		showError(w, askWho(), http.StatusInternalServerError, c)
 		c.Errorf("failed to retrieve user's links %q: %v", u.String(), err)
 		return
 	}
@@ -153,7 +161,7 @@ func addLink(w http.ResponseWriter, r *http.Request) {
 
 	_, uk, err := getUser(c)
 	if err != nil {
-		showError(w, "failed to retrieve user", http.StatusInternalServerError, c)
+		showError(w, askWho(), http.StatusInternalServerError, c)
 		c.Errorf("failed to retrieve user %q: %v", u.String(), err)
 		return
 	}
