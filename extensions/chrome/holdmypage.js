@@ -1,4 +1,4 @@
-//var baseURL = "http://localhost:8080";
+// var baseURL = "http://localhost:8080";
 var baseURL = "http://holdmypage.appspot.com";
 var bookmarked = {};
 
@@ -7,27 +7,29 @@ chrome.tabs.onActivated.addListener(function(activeInfo) {
 	//activeInfo.windowId
 });
 
+function successIndication() {
+	chrome.browserAction.setBadgeText({ text : "HELD" });
+	window.setTimeout(function() {
+		chrome.browserAction.setBadgeText({ text : "" });
+	}, 1000);
+}
+
 $(document).ready(function() {
 	$("#bookmarkCurrentPage").click(function() {
-		if(bookmarked[tab.url] !== undefined) return;
-
-		$.post(baseURL+'/add', {
-			url : tab.url
-		}, function(data){
-
-		}).fail(function(data) {
-
-		});
-
-		chrome.browserAction.setBadgeText({ text : "HELD" });
-		window.setTimeout(function() {
-			chrome.browserAction.setBadgeText({ text : "" });
-		}, 1000);
-
-		bookmarked[tab.url] = {
-			url : tab.url,
-			title : tab.title
-		};
+		chrome.tabs.getSelected(null, function(tab) {
+        	if(bookmarked[tab.url] !== undefined) return;
+			$.post(baseURL+'/add', {
+				url : tab.url
+			}, function(data){
+				bookmarked[tab.url] = {
+					url : tab.url,
+					title : tab.title
+				};
+				successIndication();
+			}).fail(function(data) {
+				alert(data);
+			});
+    	});
 	});
 
 	$("#bookmarkAllTabs").click(function() {
@@ -48,10 +50,7 @@ $(document).ready(function() {
 					alert(data);
 				});
 
-				chrome.browserAction.setBadgeText({ text : "HELD" });
-				window.setTimeout(function() {
-					chrome.browserAction.setBadgeText({ text : "" });
-				}, 1000);
+				successIndication();
 			}
 		});
 	});

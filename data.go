@@ -40,3 +40,13 @@ func (l *Link) Save(c appengine.Context, parent *datastore.Key) (*datastore.Key,
 	lk := datastore.NewIncompleteKey(c, "Link", parent)
 	return datastore.Put(c, lk, l)
 }
+
+func linkAlreadyExists(c appengine.Context, uk *datastore.Key, url string) (bool, error) {
+	links := []Link{}
+	_, err := datastore.NewQuery("Link").
+		Ancestor(uk).
+		Filter("URL = ", url).
+		GetAll(c, &links)
+	
+	return len(links) > 0, err
+}
