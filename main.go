@@ -7,7 +7,7 @@ import (
 	"net/http"
 	"math/rand"
 	"strings"
-	"text/template"
+	"html/template"
 	"time"
 
 	"golang.org/x/net/html"
