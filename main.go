@@ -307,7 +307,7 @@ func editLinkTitle(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	l.Title = r.FormValue("Title")
+	l.Title = html.EscapeString(r.FormValue("Title"))
 
 	if _, err := datastore.Put(c, k, l); err != nil {
 		http.Error(w, err.Error(), 500)
