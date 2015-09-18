@@ -190,6 +190,18 @@ func addLink(w http.ResponseWriter, r *http.Request) {
 		l.Title = parseTitle(resp.Body, url)
 	}
 
+	exists, err := linkAlreadyExists(c, uk, l.URL)
+	if exists {
+		showError(w, "This URL already is being held for you.", http.StatusBadRequest, c)
+		return
+	}
+
+	if err != nil {
+		showError(w, askWho(), http.StatusInternalServerError, c)
+		c.Errorf("failed to retrieve user's links %q: %v", u.String(), err)
+		return
+	}
+
 	_, err = l.Save(c, uk)
 	if err != nil {
 		showError(w, "failed to store link", http.StatusInternalServerError, c)
@@ -217,9 +229,30 @@ func batchAddLinks(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	//I'm not sure if it's more efficient/better to load them all in and
+	//look them up in a map or make a bunch of individual DS queries
+	links := []Link{}
+	_, err = datastore.NewQuery("Link").
+		Ancestor(uk).
+		GetAll(c, &links)
+	if err != nil {
+		showError(w, askWho(), http.StatusInternalServerError, c)
+		c.Errorf("failed to retrieve user's links %q: %v", u.String(), err)
+		return
+	}
+
+	urlLookup := map[string]bool{}
+	for _, link := range links {
+		urlLookup[link.URL] = true
+	}
+
 	urlList := strings.Split(urls, ";")
 
 	for _, url := range urlList {
+		if _, exists := urlLookup[url]; exists {
+			continue
+		}
+
 		if !strings.HasPrefix(url, "http://") && !strings.HasPrefix(url, "https://") {
 			// showError(w, "Please specify http:// or https:// in your URL.", http.StatusBadRequest, c)
 			continue
