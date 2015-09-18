@@ -90,8 +90,8 @@ $('.edit-ctrls .cancel-btn').click(function(event){
 $('.edit-ctrls .update-btn').click(function(event){
 	event.preventDefault();
 	hideEdit(this);
-	var newTitle = $('.edit-ctrls').children('.link-title-input').val();
-	$(this).parents('.link-container').children('.link-title').html(newTitle);
+	var newTitle = $(this).parents('.edit-ctrls').children('.link-title-input').val();
+	$(this).parents('.link-container').children('.link-title').text(newTitle);
 	var key = $(this).parents('.input-group-btn').next().next().val();
 	$.post('/edit', { Key : key, Title : newTitle });
 });
