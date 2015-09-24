@@ -5,8 +5,9 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"math/rand"
 	"strings"
-	"text/template"
+	"html/template"
 	"time"
 
 	"golang.org/x/net/html"
@@ -19,7 +20,10 @@ import (
 	"github.com/gorilla/mux"
 )
 
-var pages *template.Template
+var (
+	pages *template.Template
+	devs = []string{"Steve", "Scott"}
+)
 
 func init() {
 	pages = template.Must(template.ParseGlob("pages/*.html"))
@@ -33,6 +37,10 @@ func init() {
 	//TODO: should be delete, but I don't feel like writing JS to access a fundamental HTTP verb right now
 	r.HandleFunc("/link/{key}", delLink).Methods("POST")
 	http.Handle("/", r)
+}
+
+func askWho() string {
+	return fmt.Sprintf("Ask %s to look.", devs[rand.Intn(len(devs))])
 }
 
 func showIndex(w http.ResponseWriter, r *http.Request) {
@@ -51,7 +59,7 @@ func showIndex(w http.ResponseWriter, r *http.Request) {
 
 	us, uk, err := getUser(c)
 	if err != nil {
-		showError(w, "Ask Steve to look.", http.StatusInternalServerError, c)
+		showError(w, askWho(), http.StatusInternalServerError, c)
 		c.Errorf("failed to retrieve user %q: %v", u.String(), err)
 	}
 
@@ -61,7 +69,7 @@ func showIndex(w http.ResponseWriter, r *http.Request) {
 		Order("-Added").
 		GetAll(c, &links)
 	if err != nil {
-		showError(w, "Ask Scott to look.", http.StatusInternalServerError, c)
+		showError(w, askWho(), http.StatusInternalServerError, c)
 		c.Errorf("failed to retrieve user's links %q: %v", u.String(), err)
 		return
 	}
@@ -87,7 +95,7 @@ func showIndex(w http.ResponseWriter, r *http.Request) {
 func showLogin(w http.ResponseWriter, c appengine.Context) {
 	login, err := user.LoginURL(c, "/")
 	if err != nil {
-		showError(w, "Ask Steve.", http.StatusInternalServerError, c)
+		showError(w, askWho(), http.StatusInternalServerError, c)
 		c.Errorf("Failed to get login url: %v", err)
 		return
 	}
@@ -123,7 +131,7 @@ func getLinks(w http.ResponseWriter, r *http.Request) {
 
 	_, uk, err := getUser(c)
 	if err != nil {
-		showError(w, "Ask Steve to look.", http.StatusInternalServerError, c)
+		showError(w, askWho(), http.StatusInternalServerError, c)
 		c.Errorf("failed to retrieve user %q: %v", u.String(), err)
 	}
 
@@ -133,7 +141,7 @@ func getLinks(w http.ResponseWriter, r *http.Request) {
 		Order("-Added").
 		GetAll(c, &links)
 	if err != nil {
-		showError(w, "Ask Scott to look.", http.StatusInternalServerError, c)
+		showError(w, askWho(), http.StatusInternalServerError, c)
 		c.Errorf("failed to retrieve user's links %q: %v", u.String(), err)
 		return
 	}
@@ -153,7 +161,7 @@ func addLink(w http.ResponseWriter, r *http.Request) {
 
 	_, uk, err := getUser(c)
 	if err != nil {
-		showError(w, "failed to retrieve user", http.StatusInternalServerError, c)
+		showError(w, askWho(), http.StatusInternalServerError, c)
 		c.Errorf("failed to retrieve user %q: %v", u.String(), err)
 		return
 	}
@@ -180,6 +188,18 @@ func addLink(w http.ResponseWriter, r *http.Request) {
 	} else {
 		defer resp.Body.Close()
 		l.Title = parseTitle(resp.Body, url)
+	}
+
+	exists, err := linkAlreadyExists(c, uk, l.URL)
+	if exists {
+		showError(w, "This URL already is being held for you.", http.StatusBadRequest, c)
+		return
+	}
+
+	if err != nil {
+		showError(w, askWho(), http.StatusInternalServerError, c)
+		c.Errorf("failed to retrieve user's links %q: %v", u.String(), err)
+		return
 	}
 
 	_, err = l.Save(c, uk)
@@ -209,9 +229,30 @@ func batchAddLinks(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	//I'm not sure if it's more efficient/better to load them all in and
+	//look them up in a map or make a bunch of individual DS queries
+	links := []Link{}
+	_, err = datastore.NewQuery("Link").
+		Ancestor(uk).
+		GetAll(c, &links)
+	if err != nil {
+		showError(w, askWho(), http.StatusInternalServerError, c)
+		c.Errorf("failed to retrieve user's links %q: %v", u.String(), err)
+		return
+	}
+
+	urlLookup := map[string]bool{}
+	for _, link := range links {
+		urlLookup[link.URL] = true
+	}
+
 	urlList := strings.Split(urls, ";")
 
 	for _, url := range urlList {
+		if _, exists := urlLookup[url]; exists {
+			continue
+		}
+
 		if !strings.HasPrefix(url, "http://") && !strings.HasPrefix(url, "https://") {
 			// showError(w, "Please specify http:// or https:// in your URL.", http.StatusBadRequest, c)
 			continue
@@ -299,7 +340,7 @@ func editLinkTitle(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	l.Title = r.FormValue("Title")
+	l.Title = html.EscapeString(r.FormValue("Title"))
 
 	if _, err := datastore.Put(c, k, l); err != nil {
 		http.Error(w, err.Error(), 500)
