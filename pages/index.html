@@ -33,14 +33,23 @@
 		<div class="list-group">
 			{{range $index, $link := .Links}}
 			<a class="list-group-item link-container" href="{{$link.URL}}" target="_BLANK">
+				
 				<form action="/link/{{(index $.LinkKeys $index).Encode}}" method="post" class="hide-on-edit">
 					<button type="submit" class="btn btn-link pull-right">
 						<span class="glyphicon glyphicon-trash"></span>
 					</button>
 				</form>
+				
 				<button class="btn btn-link pull-right edit-btn hide-on-edit">
 					<span class="glyphicon glyphicon glyphicon-pencil"></span>
 				</button>
+				
+				<button class="btn btn-link pull-right tag-btn hide-on-edit">
+					<span class="glyphicon glyphicon-tag"></span>
+				</button>
+				
+				<input type="hidden" class="tag-list" value="{{range $tag := .Tags}} {{$tag}}, {{end}}"/>
+
 				<h4 class="link-title hide-on-edit">{{$link.Title}}</h4>
 				<div class="input-group edit-ctrls show-on-edit" style="display:none;">
 					<span class="input-group-btn">
@@ -79,9 +88,20 @@ function hideEdit(btn) {
 	$parentItem.children('.hide-on-edit').show();
 }
 
+var isTitleEdit = false;
+
+$('.tag-btn').click(function(event){
+	event.preventDefault();
+	var taglist =  $(this).parents('.link-container').children('.tag-list').val();
+	$('.edit-ctrls').children('.link-title-input').val(taglist);
+	showEdit(this);
+	isTitleEdit = false;
+});
+
 $('.edit-btn').click(function(event){
 	event.preventDefault();
 	showEdit(this);
+	isTitleEdit = true;
 });
 
 $('.edit-ctrls .cancel-btn').click(function(event){
@@ -94,10 +114,18 @@ $('.edit-ctrls .cancel-btn').click(function(event){
 $('.edit-ctrls .update-btn').click(function(event){
 	event.preventDefault();
 	hideEdit(this);
-	var newTitle = $(this).parents('.edit-ctrls').children('.link-title-input').val();
-	$(this).parents('.link-container').children('.link-title').text(newTitle);
+
 	var key = $(this).parents('.input-group-btn').next().next().val();
-	$.post('/edit', { Key : key, Title : newTitle });
+
+	if(isTitleEdit) {
+		var newTitle = $(this).parents('.edit-ctrls').children('.link-title-input').val();
+		$(this).parents('.link-container').children('.link-title').text(newTitle);
+		$.post('/edittitle', { Key : key, Title : newTitle });
+	} else {
+		var newTags = $(this).parents('.edit-ctrls').children('.link-title-input').val();
+		$(this).parents('.link-container').children('.tag-list').val(newTags);
+		$.post('/edittags', { Key : key, Tags : newTags });
+	}
 });
 
 $('.edit-ctrls input').click(function(event){
