@@ -65,10 +65,23 @@ func showIndex(w http.ResponseWriter, r *http.Request) {
 	}
 
 	links := []Link{}
-	lks, err := datastore.NewQuery("Link").
-		Ancestor(uk).
-		Order("-Added").
-		GetAll(c, &links)
+
+	var lks []*datastore.Key
+
+	queryValues := r.URL.Query()
+	tagValue, found := queryValues["tag"]
+	if found {
+		lks, err = datastore.NewQuery("Link").
+			Ancestor(uk).
+			Filter("Tags = ", tagValue[0]).
+			Order("-Added").
+			GetAll(c, &links)
+	} else {
+		lks, err = datastore.NewQuery("Link").
+			Ancestor(uk).
+			Order("-Added").
+			GetAll(c, &links)
+	}
 	if err != nil {
 		showError(w, askWho(), http.StatusInternalServerError, c)
 		c.Errorf("failed to retrieve user's links %q: %v", u.String(), err)
@@ -380,8 +393,11 @@ func editLinkTags(w http.ResponseWriter, r *http.Request) {
 	}
 	
 	tags := html.EscapeString(r.FormValue("Tags"))
-	tags = strings.Trim(tags, ", ")
+	
 	l.Tags = strings.Split(tags, ",")
+	for i := range l.Tags {
+		l.Tags[i] = strings.TrimSpace(l.Tags[i])
+	}
 	
 	if _, err := datastore.Put(c, k, l); err != nil {
 		http.Error(w, err.Error(), 500)
