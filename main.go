@@ -393,10 +393,15 @@ func editLinkTags(w http.ResponseWriter, r *http.Request) {
 	}
 	
 	tags := html.EscapeString(r.FormValue("Tags"))
+
+	l.Tags = []string{}
 	
-	l.Tags = strings.Split(tags, ",")
-	for i := range l.Tags {
-		l.Tags[i] = strings.TrimSpace(l.Tags[i])
+	tagList := strings.Split(tags, ",")
+	for _, tag := range tagList {
+		tag = strings.TrimSpace(tag)
+		if tag != "" {
+			l.Tags = append(l.Tags, tag)
+		}
 	}
 	
 	if _, err := datastore.Put(c, k, l); err != nil {
