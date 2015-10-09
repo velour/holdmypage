@@ -77,15 +77,15 @@
 <script>
 
 function showEdit(editBtn) {
+	hideEdit();
 	$parentItem = $(editBtn).parents('.link-container');
 	$parentItem.children('.hide-on-edit').hide();
 	$parentItem.children('.show-on-edit').show();
 }
 
-function hideEdit(btn) {
-	$parentItem = $(btn).parents('.link-container');
-	$parentItem.children('.show-on-edit').hide();
-	$parentItem.children('.hide-on-edit').show();
+function hideEdit() {
+	$('.show-on-edit').hide();
+	$('.hide-on-edit').show();
 }
 
 var isTitleEdit = false;
@@ -100,20 +100,22 @@ $('.tag-btn').click(function(event){
 
 $('.edit-btn').click(function(event){
 	event.preventDefault();
+	var title = $(this).parents('.link-container').children('.link-title').html();
+	$('.edit-ctrls').children('.link-title-input').val(title)
 	showEdit(this);
 	isTitleEdit = true;
 });
 
 $('.edit-ctrls .cancel-btn').click(function(event){
 	event.preventDefault();
-	hideEdit(this);
+	hideEdit();
 	var oldTitle = $(this).parents('.link-container').children('.link-title').html();
 	$('.edit-ctrls').children('.link-title-input').val(oldTitle);
 });
 
 $('.edit-ctrls .update-btn').click(function(event){
 	event.preventDefault();
-	hideEdit(this);
+	hideEdit();
 
 	var key = $(this).parents('.input-group-btn').next().next().val();
 
