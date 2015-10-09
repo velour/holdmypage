@@ -20,3 +20,10 @@ indexes:
   properties:
   - name: Added
     direction: desc
+
+- kind: Link
+  ancestor: yes
+  properties:
+  - name: Tags
+  - name: Added
+    direction: desc
