@@ -27,6 +27,23 @@ func getUser(c appengine.Context) (User, *datastore.Key, error) {
 	return us, uk, nil
 }
 
+func (u *User) AddTags(tags []string) {
+	ets := map[string]bool{}
+	for _, t := range u.Tags {
+		ets[t] = true
+	}
+	for _, t := range tags {
+		if !ets[t] {
+			u.Tags = append(u.Tags, t)
+		}
+	}
+}
+
+func (u *User) Save(c appengine.Context, uk *datastore.Key) error {
+	_, err := datastore.Put(c, uk, u)
+	return err
+}
+
 type Link struct {
 	URL   string
 	Title string
@@ -35,8 +52,6 @@ type Link struct {
 }
 
 func (l *Link) Save(c appengine.Context, parent *datastore.Key) (*datastore.Key, error) {
-	//TODO: trim spaces
-	//TODO: fetch the title
 	lk := datastore.NewIncompleteKey(c, "Link", parent)
 	return datastore.Put(c, lk, l)
 }

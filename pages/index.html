@@ -21,29 +21,33 @@
 </head>
 <body>
 <div class="container">
+	<h1>🐦 Magpie</h1>
 	<div class="row">
 
-	<div class="col-md-8">
-	<h1>🐦 Magpie</h2>
-	<div class="row">
-		<div class="col-md-6">
-			<form action="/add" method="post" class="form-inline">
-				<input name="url" class="form-control"/>
-				<input type="submit" value="Save it for later" class="btn btn-primary"/>
-			</form>
-		</div>
-		<div class="col-md-6">
-			<div class="form-inline">
-	 			<input id="tag" class="form-control"/>
-	 			<button id="filter" class="btn btn-primary">Filter</button>
-			</div>
-		</div>
-	</div>
+	<div class="col-md-2">
+	<h2><span class="glyphicon glyphicon-tags"></span> Tags</h2>
 	<p>
 		<div class="list-group">
-		{{ if not .Links }}
+			<a class="list-group-item link-container" href="/">All</a>
+			{{range $index, $link := .User.Tags}}
+			<a class="list-group-item link-container" href="/?tag={{.}}">
+				{{.}}
+			</a>
+			{{end}}
+		</div>
+	</p>
+	</div>
+
+	<div class="col-md-8">
+	<form action="/add" method="post" class="form-inline">
+		<input name="url" class="form-control"/>
+		<input type="submit" value="Save it for later" class="btn btn-primary"/>
+	</form>
+	<p>
+		<div class="list-group">
+			{{ if not .Links }}
 			<h4 class="text-center" style="padding-top:25px;">no links found</h4>
-		{{ end }}
+			{{ end }}
 			{{range $index, $link := .Links}}
 			<a class="list-group-item link-container" href="{{$link.URL}}" target="_BLANK">
 				
@@ -77,11 +81,9 @@
 				</p>
 			</a>
 			{{end}}
-		</ul>
+		</div>
 	</p>
 	</div>
-
-	{{/* this space reserved for the tags column */}}
 
 	</div>
 </div>
@@ -145,13 +147,6 @@ $('.edit-ctrls .update-btn').click(function(event){
 
 $('.edit-ctrls input').click(function(event){
 	event.preventDefault();
-});
-
-$('#filter').click(function() {
-	var tag = encodeURI($("#tag").val().trim());
-	if(tag != "") {
-		window.location = window.location.origin + "?tag=" + tag;
-	}
 });
 
 </script>
