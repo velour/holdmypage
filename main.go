@@ -372,7 +372,7 @@ func editLinkTags(w http.ResponseWriter, r *http.Request) {
 	c := appengine.NewContext(r)
 	u := user.Current(c)
 
-	_, _, err := getUser(c)
+	lu, uk, err := getUser(c)
 	if err != nil {
 		showError(w, "failed to retrieve user", http.StatusInternalServerError, c)
 		c.Errorf("failed to retrieve user %q: %v", u.String(), err)
@@ -401,6 +401,16 @@ func editLinkTags(w http.ResponseWriter, r *http.Request) {
 		tag = strings.TrimSpace(tag)
 		if tag != "" {
 			l.Tags = append(l.Tags, tag)
+		}
+	}
+
+	nt := len(lu.Tags)
+	lu.AddTags(l.Tags)
+	if len(lu.Tags) != nt {
+		err := lu.Save(c, uk)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
 		}
 	}
 	
