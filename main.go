@@ -33,7 +33,8 @@ func init() {
 	r.HandleFunc("/getlinks", getLinks).Methods("GET")
 	r.HandleFunc("/add", addLink).Methods("POST")
 	r.HandleFunc("/batchadd", batchAddLinks).Methods("POST")
-	r.HandleFunc("/edit", editLinkTitle).Methods("POST")
+	r.HandleFunc("/edittitle", editLinkTitle).Methods("POST")
+	r.HandleFunc("/edittags", editLinkTags).Methods("POST")
 	//TODO: should be delete, but I don't feel like writing JS to access a fundamental HTTP verb right now
 	r.HandleFunc("/link/{key}", delLink).Methods("POST")
 	http.Handle("/", r)
@@ -64,10 +65,23 @@ func showIndex(w http.ResponseWriter, r *http.Request) {
 	}
 
 	links := []Link{}
-	lks, err := datastore.NewQuery("Link").
-		Ancestor(uk).
-		Order("-Added").
-		GetAll(c, &links)
+
+	var lks []*datastore.Key
+
+	queryValues := r.URL.Query()
+	tagValue, found := queryValues["tag"]
+	if found {
+		lks, err = datastore.NewQuery("Link").
+			Ancestor(uk).
+			Filter("Tags = ", tagValue[0]).
+			Order("-Added").
+			GetAll(c, &links)
+	} else {
+		lks, err = datastore.NewQuery("Link").
+			Ancestor(uk).
+			Order("-Added").
+			GetAll(c, &links)
+	}
 	if err != nil {
 		showError(w, askWho(), http.StatusInternalServerError, c)
 		c.Errorf("failed to retrieve user's links %q: %v", u.String(), err)
@@ -311,6 +325,7 @@ func parseTitle(resp io.Reader, fallback string) string {
 	return fallback
 }
 
+
 func editLinkTitle(w http.ResponseWriter, r *http.Request) {
 	if r.Method != "POST" {
 		http.NotFound(w, r)
@@ -339,9 +354,56 @@ func editLinkTitle(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), 500)
 		return
 	}
-
+	
 	l.Title = html.EscapeString(r.FormValue("Title"))
+	
+	if _, err := datastore.Put(c, k, l); err != nil {
+		http.Error(w, err.Error(), 500)
+		return
+	}
+}
 
+func editLinkTags(w http.ResponseWriter, r *http.Request) {
+	if r.Method != "POST" {
+		http.NotFound(w, r)
+		return
+	}
+
+	c := appengine.NewContext(r)
+	u := user.Current(c)
+
+	_, _, err := getUser(c)
+	if err != nil {
+		showError(w, "failed to retrieve user", http.StatusInternalServerError, c)
+		c.Errorf("failed to retrieve user %q: %v", u.String(), err)
+		return
+	}
+
+	var k *datastore.Key
+
+	if k, err = datastore.DecodeKey(r.FormValue("Key")); err != nil {
+		http.Error(w, err.Error(), 501)
+		return
+	}
+
+	l := new(Link)
+	if err := datastore.Get(c, k, l); err != nil {
+		http.Error(w, err.Error(), 500)
+		return
+	}
+	
+	tags := html.EscapeString(r.FormValue("Tags"))
+
+	l.Tags = []string{}
+	
+	tagList := strings.Split(tags, ",")
+	for _, tag := range tagList {
+		tag = strings.TrimSpace(tag)
+		if tag != "" {
+			l.Tags = append(l.Tags, tag)
+		}
+	}
+	
 	if _, err := datastore.Put(c, k, l); err != nil {
 		http.Error(w, err.Error(), 500)
 		return

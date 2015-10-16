@@ -25,22 +25,44 @@
 
 	<div class="col-md-8">
 	<h1>🐦 Magpie</h2>
-	<form action="/add" method="post" class="form-inline">
-		<input name="url" class="form-control"/>
-		<input type="submit" value="Save it for later" class="btn btn-primary"/>
-	</form>
+	<div class="row">
+		<div class="col-md-6">
+			<form action="/add" method="post" class="form-inline">
+				<input name="url" class="form-control"/>
+				<input type="submit" value="Save it for later" class="btn btn-primary"/>
+			</form>
+		</div>
+		<div class="col-md-6">
+			<div class="form-inline">
+	 			<input id="tag" class="form-control"/>
+	 			<button id="filter" class="btn btn-primary">Filter</button>
+			</div>
+		</div>
+	</div>
 	<p>
 		<div class="list-group">
+		{{ if not .Links }}
+			<h4 class="text-center" style="padding-top:25px;">no links found</h4>
+		{{ end }}
 			{{range $index, $link := .Links}}
-			<a class="list-group-item link-container" href="{{$link.URL}}">
+			<a class="list-group-item link-container" href="{{$link.URL}}" target="_BLANK">
+				
 				<form action="/link/{{(index $.LinkKeys $index).Encode}}" method="post" class="hide-on-edit">
 					<button type="submit" class="btn btn-link pull-right">
 						<span class="glyphicon glyphicon-trash"></span>
 					</button>
 				</form>
+				
 				<button class="btn btn-link pull-right edit-btn hide-on-edit">
 					<span class="glyphicon glyphicon glyphicon-pencil"></span>
 				</button>
+				
+				<button class="btn btn-link pull-right tag-btn hide-on-edit">
+					<span class="glyphicon glyphicon-tag"></span>
+				</button>
+				
+				<input type="hidden" class="tag-list" value="{{range $tag := .Tags}} {{$tag}}, {{end}}"/>
+
 				<h4 class="link-title hide-on-edit">{{$link.Title}}</h4>
 				<div class="input-group edit-ctrls show-on-edit" style="display:none;">
 					<span class="input-group-btn">
@@ -68,40 +90,68 @@
 <script>
 
 function showEdit(editBtn) {
+	hideEdit();
 	$parentItem = $(editBtn).parents('.link-container');
 	$parentItem.children('.hide-on-edit').hide();
 	$parentItem.children('.show-on-edit').show();
 }
 
-function hideEdit(btn) {
-	$parentItem = $(btn).parents('.link-container');
-	$parentItem.children('.show-on-edit').hide();
-	$parentItem.children('.hide-on-edit').show();
+function hideEdit() {
+	$('.show-on-edit').hide();
+	$('.hide-on-edit').show();
 }
+
+var isTitleEdit = false;
+
+$('.tag-btn').click(function(event){
+	event.preventDefault();
+	var taglist =  $(this).parents('.link-container').children('.tag-list').val();
+	$('.edit-ctrls').children('.link-title-input').val(taglist);
+	showEdit(this);
+	isTitleEdit = false;
+});
 
 $('.edit-btn').click(function(event){
 	event.preventDefault();
+	var title = $(this).parents('.link-container').children('.link-title').html();
+	$('.edit-ctrls').children('.link-title-input').val(title)
 	showEdit(this);
+	isTitleEdit = true;
 });
 
 $('.edit-ctrls .cancel-btn').click(function(event){
 	event.preventDefault();
-	hideEdit(this);
+	hideEdit();
 	var oldTitle = $(this).parents('.link-container').children('.link-title').html();
 	$('.edit-ctrls').children('.link-title-input').val(oldTitle);
 });
 
 $('.edit-ctrls .update-btn').click(function(event){
 	event.preventDefault();
-	hideEdit(this);
-	var newTitle = $(this).parents('.edit-ctrls').children('.link-title-input').val();
-	$(this).parents('.link-container').children('.link-title').text(newTitle);
+	hideEdit();
+
 	var key = $(this).parents('.input-group-btn').next().next().val();
-	$.post('/edit', { Key : key, Title : newTitle });
+
+	if(isTitleEdit) {
+		var newTitle = $(this).parents('.edit-ctrls').children('.link-title-input').val();
+		$(this).parents('.link-container').children('.link-title').text(newTitle);
+		$.post('/edittitle', { Key : key, Title : newTitle });
+	} else {
+		var newTags = $(this).parents('.edit-ctrls').children('.link-title-input').val();
+		$(this).parents('.link-container').children('.tag-list').val(newTags);
+		$.post('/edittags', { Key : key, Tags : newTags });
+	}
 });
 
 $('.edit-ctrls input').click(function(event){
 	event.preventDefault();
+});
+
+$('#filter').click(function() {
+	var tag = encodeURI($("#tag").val().trim());
+	if(tag != "") {
+		window.location = window.location.origin + "?tag=" + tag;
+	}
 });
 
 </script>
